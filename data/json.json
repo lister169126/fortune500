@@ -1,9 +1,0 @@
-
-        try{
-            if (queryly.QuerylyRelatedCallback != undefined){          
-                    queryly.QuerylyRelatedCallback();
-                    
-            }
-        }
-        catch(e){}
-    
