@@ -1,0 +1,138 @@
+
+(function(){
+
+        try{
+            template = document.createElement('div');
+            template.innerHTML = '<script type="text/html" id="queryly_related_template">	<li>        <div class="articleSidebar__eyebrowWrapper--2uZCY">            <a class="articleSidebar__eyebrowLink--3ICd5" href="https://fortune.com/section/<%=queryly.relateddata.section%>/?queryly=related_article" section="<%=queryly.relateddata.section%>" data-label="category click : <%=queryly.relateddata.title%>"><%=queryly.relateddata.section%></a>        </div>        <div class="articleSidebar__wrapper--H2n_O">            <div class="articleSidebar__bottom--31Ro-">                <a class="articleSidebar__link--3Wqxo" href="<%=queryly.relateddata.link%>?queryly=related_article" section="<%=queryly.relateddata.section%>" data-label="title click : <%=queryly.relateddata.title%>">                    <div style="margin-bottom:10px"><%=queryly.relateddata.title%></div>                </a>            </div>            <div class="articleSidebar__top--2Cgkm">                <a href="<%=queryly.relateddata.link%>?queryly=related_article" section="<%=queryly.relateddata.section%>" data-label="banner click : <%=queryly.relateddata.title%>">                    <figure>                        <span class="image__wrapper--i55tn image__apsectRatio--BncNO image__lazyload--1CqFg image__loaded--2E5R8" style="padding-bottom: 66.6667%;">                            <img class="image__img--3bauF" src="<%=queryly.relateddata.image%>" sizes="100px" width="100%" height="100%" style="max-width:130px;" alt="<%=queryly.relateddata.title%>"/>                        </span>                    </figure>                </a>            </div>        </div>        <div>             <div style="color:#999;font-size: 14px;font-weight: normal;"><%=queryly.relateddata.pubdate%></div>            <div class="contentListItem__bylineWrapper--1Eqny" style="display: inline-flex; flex-wrap: wrap;">               <%if (queryly.relateddata.creatorhtml != \'\') {%>                <span style="color: rgb(112, 105, 107);">By </span><%=queryly.relateddata.creatorhtml%>               <%}%>            </div>        </div>    </li></script>';
+            document.head.appendChild(template);
+  
+            //var anchor = '#article-popular';
+var anchor = '#article-related';
+var related_template = 'queryly_related_template';
+queryly.related.batchSize = 5;
+queryly.related.decay =5;
+queryly.extendedDataFields = "creator,section";
+
+queryly.callback.relatedClicked = function (link) {
+	var section = link.getAttribute("section");
+	var label = link.getAttribute("data-label");
+  	window.dataLayer = window.dataLayer || [];
+  	window.dataLayer.push({
+      "event" : "eventTracker",
+      "eventAction" : section,
+      "eventLabel" : label,
+      "eventCategory" : "Navigation",
+      "contentPlacementCD" : 'related articles'
+	});
+}
+
+queryly.QuerylyRelatedCallback = function (related) {
+
+    if (related == null || related.items == null) {
+        return;
+    }
+  	
+ 	var templatename = 'queryly_related_template';
+    var existingarticles = [];
+
+    if (document.querySelector(anchor) != null) {
+
+        var relateditemhtml = '';
+        var counter = 0;
+
+        for (var relateditemcount = 0; relateditemcount < related.items.length; relateditemcount++) {
+            try {
+                queryly.relateddata = related.items[relateditemcount];
+                queryly.relateddata.title = queryly.relateddata.title.replace(/(([^\s]+\s\s*){18})(.*)/, "$1...");
+                if (existingarticles.indexOf(queryly.relateddata.title) >= 0){continue;}
+              
+                existingarticles.push(queryly.relateddata.title);
+              	var recommendsArticle = queryly.relateddata.link.match(/recommends/g);
+              	if (recommendsArticle) {
+                	queryly.relateddata.pubdate = '';
+                } else {
+                	queryly.relateddata.pubdate = (new Date(queryly.relateddata.pubdate)).toLocaleDateString('en-US',{ year: 'numeric', month: 'long', day: 'numeric' });
+                }
+              
+                if (queryly.relateddata.image.indexOf('resize=1200,600') > 0){
+                  queryly.relateddata.image = queryly.relateddata.image.replace('resize=1200,600','resize=130,86');
+                }
+                else if (queryly.relateddata.image.indexOf('?') < 0){                  
+                	queryly.relateddata.image = queryly.relateddata.image + '?resize=130,86';
+                }
+                else{
+                  queryly.relateddata.image = queryly.relateddata.image + '&resize=130,86';
+                }
+              
+                var creators = queryly.relateddata.creator.split(',');
+                var creatorhtml = '';
+                for (var i=0;i < creators.length; i++){
+                  if (creators[i].trim() == "The Associated Press"){
+                    creators[i] ="Associated Press";
+                  }
+                  if (creators[i] == '') {continue;}
+                  
+                  creatorhtml = creatorhtml + '<a href="https://fortune.com/author/' + creators[i].trim().replaceAll(" ","-") + '/?queryly=related_article" section="' + queryly.relateddata.section + '" data-label="author name : ' + creators[i] + '" style="text-decoration: none;color: #000;font-weight: 600;">' + creators[i] + '</a>';
+                  if (i == 0){
+                    if (creators.length ==2){
+                      creatorhtml = creatorhtml + " and ";
+                    }
+                    else if (creators.length > 2){
+                      creatorhtml = creatorhtml + ", ";
+                    }                     
+                  }
+                  else if (i == 1 && creators.length > 2){
+                      creatorhtml = creatorhtml + "<span style='color:#000;font-weight:600;'> and Others</span>";
+                      break;
+                  }
+                }
+                queryly.relateddata.creatorhtml = creatorhtml;
+                relateditemhtml = relateditemhtml + queryly.util.tmpl(related_template, queryly.relateddata);
+                counter = counter + 1;
+            }
+            catch (e) {}
+        }
+ 
+        if (relateditemhtml != '') {
+           htmlcontent ="<div class='articleRelated__heading--2lPt-'>Related Articles</div><ul class='articleRelated__list--1L7vK'>" + relateditemhtml + "</ul>";
+            document.querySelector(anchor).innerHTML = htmlcontent;
+          	
+          queryly.related.hookRelatedEvent('#article-related a');
+        }        
+    }
+    else {
+        setTimeout(queryly.QuerylyRelatedCallback(related), 1000);
+    }
+};
+                
+            var relatedurl = '//related.queryly.com/json.aspx?queryly_key=' + queryly.QuerylyKey + '&callback=queryly.QuerylyRelatedCallback' + '&pageurl=' + encodeURIComponent('https://fortune.com/ranking/fortune500/2023/search/') + '&batchsize=' + queryly.related.batchSize + '&decay=' + queryly.related.decay + "&extendedDataFields=" + encodeURIComponent(queryly.extendedDataFields);
+            if (typeof queryly.related.title != 'undefined' && queryly.related.title != ''){
+                var relatedurl = '//related.queryly.com/json.aspx?queryly_key=' + queryly.QuerylyKey + '&callback=queryly.QuerylyRelatedCallback' + '&batchsize=' + queryly.related.batchSize + '&decay=' + queryly.related.decay + "&extendedDataFields=" + encodeURIComponent(queryly.extendedDataFields) + '&title=' + encodeURIComponent(queryly.related.title);
+                if (typeof queryly.related.text != 'undefined' && queryly.related.text != ''){
+                    if (queryly.related.text.length < 512){
+                        relatedurl = relatedurl + '&text=' + encodeURIComponent(queryly.related.text);
+                    }
+                    else{
+                        relatedurl = relatedurl + '&text=' + encodeURIComponent(queryly.related.text.substring(0,512));
+                    }
+                }
+            } 
+
+            if (queryly.related.feednames != ''){
+                relatedurl = relatedurl + '&feednames=' + encodeURIComponent(queryly.related.feednames)
+            }            
+            
+            if (typeof queryly.related.facetedkey != 'undefined' && typeof queryly.related.facetedvalue != 'undefined'){
+                relatedurl = relatedurl + '&facetedkey=' + encodeURIComponent(queryly.related.facetedkey) + "&facetedvalue=" + encodeURIComponent(queryly.related.facetedvalue);
+            }
+            
+            
+          
+            queryly.util.loadScript(relatedurl, function () {
+            });
+        }
+        catch(e){}       
+    
+    new Image().src = "//data.queryly.com/ping.aspx?type=pv&queryly_key=" + queryly.QuerylyKey + "&visitorid=" + queryly.visitorid + "&httpurl=" + encodeURIComponent(document.URL.replace(/&amp;/g, "&")) + "&httpreferer=" + encodeURIComponent(document.referrer.replace(/&amp;/g, "&"));
+
+})();
